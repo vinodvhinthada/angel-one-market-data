@@ -7,13 +7,28 @@ from flask import Flask, render_template, jsonify, request
 import json
 import pyotp
 import time
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import requests
 import os
 from werkzeug.exceptions import RequestEntityTooLarge
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['MAX_CO        print("Fetching Bank Nifty Futures data...")
+        cached_data['bank_futures'] = fetch_market_data(BANK_NIFTY_FUTURES, "NFO")
+        
+        cached_data['last_update'] = get_ist_time()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Data refreshed successfully',
+            'timestamp': cached_data['last_update'].strftime('%Y-%m-%d %H:%M:%S IST')
+        })TH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# IST timezone helper function
+def get_ist_time():
+    """Get current time in Indian Standard Time (IST)"""
+    ist = timezone(timedelta(hours=5, minutes=30))
+    return datetime.now(ist)
 
 # ====== CONFIGURATION ======
 # Use environment variables in production
@@ -439,7 +454,7 @@ def get_data(data_type):
             'data': data,
             'meter': meter_data,
             'pcr_data': cached_data.get('pcr_data', {}),
-            'last_update': cached_data['last_update'].strftime('%Y-%m-%d %H:%M:%S') if cached_data['last_update'] else None
+            'last_update': cached_data['last_update'].strftime('%Y-%m-%d %H:%M:%S IST') if cached_data['last_update'] else None
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -533,7 +548,7 @@ def get_meters():
                 'value': round(bank_meter, 3),
                 **get_meter_status(bank_meter)
             },
-            'last_update': cached_data['last_update'].strftime('%Y-%m-%d %H:%M:%S') if cached_data['last_update'] else None
+            'last_update': cached_data['last_update'].strftime('%Y-%m-%d %H:%M:%S IST') if cached_data['last_update'] else None
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
