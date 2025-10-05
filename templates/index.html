@@ -410,7 +410,7 @@
                                     <td>${pcrValue > 0 ? pcrValue.toFixed(2) : 'N/A'}</td>
                                     <td>${formatNumber(stock.tradeVolume)}</td>
                                     <td class="${getChangeClass(stock.netChangeOpnInterest)}">
-                                        ${stock.netChangeOpnInterest !== 0 ? formatNumber(stock.netChangeOpnInterest) : (stock.opnInterest ? formatNumber(stock.opnInterest) : 'N/A')}
+                                        ${stock.netChangeOpnInterest !== 0 ? formatNumber(stock.netChangeOpnInterest) : '0'}
                                     </td>
                                     <td class="${getChangeClass(impact)}"><span class="badge badge-impact bg-secondary">${impact.toFixed(3)}</span></td>
                                 `;

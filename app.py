@@ -45,6 +45,8 @@ def get_previous_trading_day():
 
 def get_historical_oi_data(symbol_token):
     """Get historical OI data for a specific token with caching"""
+    print(f"🔍 Getting historical OI for token: {symbol_token}")
+    
     # Check cache first
     cache_key = f"oi_{symbol_token}"
     today = get_ist_time().date()
@@ -52,16 +54,22 @@ def get_historical_oi_data(symbol_token):
     if cache_key in cached_data['historical_oi_cache']:
         cache_date, cache_data = cached_data['historical_oi_cache'][cache_key]
         if cache_date == today:
+            print(f"📋 Using cached OI data for {symbol_token}: {cache_data}")
             return cache_data
     
     if not cached_data['auth_token']:
+        print(f"❌ No auth token for historical OI request")
         if not authenticate():
+            print(f"❌ Authentication failed for historical OI")
             return 0
     
     previous_day = get_previous_trading_day()
     from_date = previous_day.strftime('%Y-%m-%d 09:15')
     to_date = previous_day.strftime('%Y-%m-%d 15:30')
     
+    print(f"📅 Fetching historical OI for {previous_day.strftime('%Y-%m-%d')}")
+    
+    # Official Angel One Historical OI API endpoint
     url = "https://apiconnect.angelone.in/rest/secure/angelbroking/historical/v1/getOIData"
     
     headers = {
@@ -76,6 +84,7 @@ def get_historical_oi_data(symbol_token):
         'Authorization': f'Bearer {cached_data["auth_token"]}'
     }
     
+    # Use ONE_DAY interval to get the final OI value for the previous trading day
     payload = {
         "exchange": "NFO",
         "symboltoken": str(symbol_token),
@@ -84,22 +93,40 @@ def get_historical_oi_data(symbol_token):
         "todate": to_date
     }
     
+    print(f"🌐 Making historical OI API request for token {symbol_token}")
+    print(f"📦 Payload: {payload}")
+    
     try:
         response = requests.post(url, json=payload, headers=headers, timeout=30)
+        print(f"📡 Historical OI API response status: {response.status_code}")
         
         if response.status_code == 200:
             data = response.json()
+            print(f"📊 Historical OI API response: {data}")
+            
             if data.get('status') and data.get('data'):
-                # Get the latest OI from the previous day
+                # Official API response format: [{"time": "2024-08-19T12:24:00+05:30", "oi": 166100}]
                 oi_data = data['data']
-                if oi_data:
-                    previous_oi = oi_data[-1].get('oi', 0)  # Last OI value of the day
+                if oi_data and len(oi_data) > 0:
+                    # Get the last OI value from the day
+                    last_oi_entry = oi_data[-1]
+                    previous_oi = last_oi_entry.get('oi', 0)
+                    
+                    print(f"✅ Historical OI found for {symbol_token}: {previous_oi}")
+                    
                     # Cache the result
                     cached_data['historical_oi_cache'][cache_key] = (today, previous_oi)
                     return previous_oi
+                else:
+                    print(f"⚠️ No OI data in response for {symbol_token}")
+            else:
+                print(f"❌ API returned error for {symbol_token}: {data}")
+        else:
+            print(f"❌ HTTP Error {response.status_code}: {response.text}")
+            
         return 0
     except Exception as e:
-        print(f"Error fetching historical OI for token {symbol_token}: {e}")
+        print(f"💥 Error fetching historical OI for token {symbol_token}: {e}")
         return 0
 
 # ====== CONFIGURATION ======
@@ -360,11 +387,19 @@ def fetch_market_data(tokens_dict, exchange="NSE"):
                             current_oi = int(item.get('opnInterest', 0))
                             
                             if exchange == "NFO" and current_oi > 0:
+                                print(f"🔮 Calculating OI change for {stock_info['symbol']} (Token: {token_key})")
+                                print(f"📊 Current OI: {current_oi}")
                                 # Get historical OI data for futures
                                 previous_oi = get_historical_oi_data(token_key)
                                 if previous_oi > 0:
                                     net_oi_change = current_oi - previous_oi
-                                    print(f"OI Change for {stock_info['symbol']}: Current={current_oi}, Previous={previous_oi}, Change={net_oi_change}")
+                                    print(f"✅ OI Change calculated for {stock_info['symbol']}: Current={current_oi}, Previous={previous_oi}, Change={net_oi_change}")
+                                else:
+                                    print(f"⚠️ No previous OI data for {stock_info['symbol']}, using 0")
+                            elif exchange == "NFO":
+                                print(f"ℹ️ Skipping OI calculation for {stock_info['symbol']} - Current OI is 0")
+                            else:
+                                print(f"ℹ️ Skipping OI calculation for {stock_info['symbol']} - Not NFO exchange ({exchange})")
                             
                             processed_item = {
                                 'token': token_key,
@@ -670,6 +705,19 @@ def get_meters():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/test_historical_oi/<token>')
+def test_historical_oi(token):
+    """Test endpoint to check historical OI API"""
+    if not authenticate():
+        return jsonify({"error": "Authentication failed"})
+    
+    result = get_historical_oi_data(token)
+    return jsonify({
+        "token": token,
+        "historical_oi": result,
+        "cache": cached_data.get('historical_oi_cache', {})
+    })
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
