@@ -21,11 +21,86 @@ def get_ist_time():
     ist = timezone(timedelta(hours=5, minutes=30))
     return datetime.now(ist)
 
-# IST timezone helper function
-def get_ist_time():
-    """Get current time in Indian Standard Time (IST)"""
-    ist = timezone(timedelta(hours=5, minutes=30))
-    return datetime.now(ist)
+def get_previous_trading_day():
+    """Get the previous trading day (excluding weekends)"""
+    today = get_ist_time().date()
+    
+    # If today is Monday (weekday 0), previous trading day is Friday (3 days back)
+    # If today is Tuesday-Friday (weekday 1-4), previous trading day is yesterday
+    # If today is Saturday (weekday 5), previous trading day is Friday (1 day back)
+    # If today is Sunday (weekday 6), previous trading day is Friday (2 days back)
+    
+    weekday = today.weekday()
+    if weekday == 0:  # Monday
+        days_back = 3
+    elif weekday == 5:  # Saturday
+        days_back = 1
+    elif weekday == 6:  # Sunday
+        days_back = 2
+    else:  # Tuesday to Friday
+        days_back = 1
+    
+    previous_day = today - timedelta(days=days_back)
+    return previous_day
+
+def get_historical_oi_data(symbol_token):
+    """Get historical OI data for a specific token with caching"""
+    # Check cache first
+    cache_key = f"oi_{symbol_token}"
+    today = get_ist_time().date()
+    
+    if cache_key in cached_data['historical_oi_cache']:
+        cache_date, cache_data = cached_data['historical_oi_cache'][cache_key]
+        if cache_date == today:
+            return cache_data
+    
+    if not cached_data['auth_token']:
+        if not authenticate():
+            return 0
+    
+    previous_day = get_previous_trading_day()
+    from_date = previous_day.strftime('%Y-%m-%d 09:15')
+    to_date = previous_day.strftime('%Y-%m-%d 15:30')
+    
+    url = "https://apiconnect.angelone.in/rest/secure/angelbroking/historical/v1/getOIData"
+    
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-UserType': 'USER',
+        'X-SourceID': 'WEB',
+        'X-ClientLocalIP': '192.168.1.1',
+        'X-ClientPublicIP': '192.168.1.1',
+        'X-MACAddress': '00:00:00:00:00:00',
+        'X-PrivateKey': API_KEY,
+        'Authorization': f'Bearer {cached_data["auth_token"]}'
+    }
+    
+    payload = {
+        "exchange": "NFO",
+        "symboltoken": str(symbol_token),
+        "interval": "ONE_DAY",
+        "fromdate": from_date,
+        "todate": to_date
+    }
+    
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('status') and data.get('data'):
+                # Get the latest OI from the previous day
+                oi_data = data['data']
+                if oi_data:
+                    previous_oi = oi_data[-1].get('oi', 0)  # Last OI value of the day
+                    # Cache the result
+                    cached_data['historical_oi_cache'][cache_key] = (today, previous_oi)
+                    return previous_oi
+        return 0
+    except Exception as e:
+        print(f"Error fetching historical OI for token {symbol_token}: {e}")
+        return 0
 
 # ====== CONFIGURATION ======
 # Use direct credentials for local testing
@@ -48,7 +123,8 @@ cached_data = {
     'bank_futures': None,
     'pcr_data': None,
     'last_update': None,
-    'auth_token': None
+    'auth_token': None,
+    'historical_oi_cache': {}  # Cache for historical OI data
 }
 
 # Updated Nifty 50 Token Mapping with New Weightages (October 2025) - COMPLETE 47 STOCKS
@@ -278,6 +354,18 @@ def fetch_market_data(tokens_dict, exchange="NSE"):
                         token_key = str(item['symbolToken'])  # Convert to string for consistent lookup
                         if token_key in tokens_dict:
                             stock_info = tokens_dict[token_key]
+                            
+                            # Calculate Net OI Change for futures (NFO exchange)
+                            net_oi_change = 0
+                            current_oi = int(item.get('opnInterest', 0))
+                            
+                            if exchange == "NFO" and current_oi > 0:
+                                # Get historical OI data for futures
+                                previous_oi = get_historical_oi_data(token_key)
+                                if previous_oi > 0:
+                                    net_oi_change = current_oi - previous_oi
+                                    print(f"OI Change for {stock_info['symbol']}: Current={current_oi}, Previous={previous_oi}, Change={net_oi_change}")
+                            
                             processed_item = {
                                 'token': token_key,
                                 'symbol': stock_info['symbol'],
@@ -292,8 +380,8 @@ def fetch_market_data(tokens_dict, exchange="NSE"):
                                 'netChange': float(item.get('netChange', 0)),
                                 'percentChange': float(item.get('percentChange', 0)),  # Note: now 'percentChange' not 'pChange'
                                 'tradeVolume': int(item.get('tradeVolume', 0)),  # Note: now 'tradeVolume' not 'totVolume'
-                                'netChangeOpnInterest': float(item.get('netChangeOpnInterest', 0)) if 'netChangeOpnInterest' in item else 0,
-                                'opnInterest': int(item.get('opnInterest', 0)) if 'opnInterest' in item else 0,  # Keep as backup
+                                'netChangeOpnInterest': net_oi_change,  # Use calculated value for futures, 0 for stocks
+                                'opnInterest': current_oi,
                                 'tradingSymbol': item.get('tradingSymbol', stock_info['symbol'])
                             }
                             market_data.append(processed_item)
