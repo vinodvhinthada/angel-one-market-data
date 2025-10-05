@@ -261,12 +261,12 @@ def fetch_market_data(tokens_dict, exchange="NSE"):
                     for item in fetched_data:
                         print(f"Processing item: {item}")  # Debug logging
                         
-                        # Check if exchToken exists in the response
-                        if 'exchToken' not in item:
-                            print(f"Warning: exchToken not found in item: {item}")
+                        # Angel One API now uses 'symbolToken' instead of 'exchToken'
+                        if 'symbolToken' not in item:
+                            print(f"Warning: symbolToken not found in item: {item}")
                             continue
                             
-                        token_key = str(item['exchToken'])  # Convert to string for consistent lookup
+                        token_key = str(item['symbolToken'])  # Convert to string for consistent lookup
                         if token_key in tokens_dict:
                             stock_info = tokens_dict[token_key]
                             processed_item = {
@@ -281,8 +281,8 @@ def fetch_market_data(tokens_dict, exchange="NSE"):
                                 'low': float(item.get('low', 0)),
                                 'close': float(item.get('close', 0)),
                                 'netChange': float(item.get('netChange', 0)),
-                                'percentChange': float(item.get('pChange', 0)),
-                                'tradeVolume': int(item.get('totVolume', 0)),
+                                'percentChange': float(item.get('percentChange', 0)),  # Note: now 'percentChange' not 'pChange'
+                                'tradeVolume': int(item.get('tradeVolume', 0)),  # Note: now 'tradeVolume' not 'totVolume'
                                 'opnInterest': int(item.get('opnInterest', 0)) if 'opnInterest' in item else 0,
                                 'tradingSymbol': item.get('tradingSymbol', stock_info['symbol'])
                             }
