@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Market Data Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .meter-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px 0;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        .meter-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            text-align: center;
+        }
+        .meter-status {
+            font-size: 1.2rem;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .refresh-btn {
+            background: linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        .summary-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid #007bff;
+        }
+        .nav-pills .nav-link.active {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+        }
+        .table-responsive {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .positive { color: #28a745; font-weight: bold; }
+        .negative { color: #dc3545; font-weight: bold; }
+        .neutral { color: #6c757d; }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2rem;
+            color: #666;
+        }
+        .timestamp {
+            font-size: 0.9rem;
+            color: #666;
+            font-style: italic;
+        }
+        .badge-impact {
+            font-size: 0.85rem;
+            padding: 4px 8px;
+        }
+        .position-analysis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .position-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            border-left: 4px solid;
+        }
+        .position-bullish { border-left-color: #28a745; }
+        .position-bearish { border-left-color: #dc3545; }
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 8px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+        .metric-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        .metric-value {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="row bg-white shadow-sm mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center py-3">
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-chart-line text-primary"></i>
+                        Live Market Data Dashboard
+                    </h1>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="timestamp" id="lastUpdate">Last Update: Never</span>
+                        <button class="btn refresh-btn" id="refreshBtn">
+                            <i class="fas fa-sync-alt me-2"></i>
+                            Refresh Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Meter Cards -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="meter-card" id="niftyMeter">
+                    <div class="meter-value">--</div>
+                    <div class="meter-status">NIFTY 50 FUTURES METER</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="meter-card" id="bankMeter">
+                    <div class="meter-value">--</div>
+                    <div class="meter-status">BANK NIFTY FUTURES METER</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-pills mb-4" id="dataTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="nifty50-tab" data-bs-toggle="pill" data-bs-target="#nifty50" type="button">
+                    NIFTY 50 LIVE MARKET DATA
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="banknifty-tab" data-bs-toggle="pill" data-bs-target="#banknifty" type="button">
+                    BANK NIFTY LIVE MARKET DATA
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="niftyfutures-tab" data-bs-toggle="pill" data-bs-target="#niftyfutures" type="button">
+                    NIFTY 50 FUTURES (28 OCT 2025)
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="bankfutures-tab" data-bs-toggle="pill" data-bs-target="#bankfutures" type="button">
+                    BANK NIFTY FUTURES (28 OCT 2025)
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="dataTabsContent">
+            <!-- Nifty 50 Tab -->
+            <div class="tab-pane fade show active" id="nifty50" role="tabpanel">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-responsive mb-4">
+                            <table class="table table-striped table-hover" id="nifty50Table">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Company</th>
+                                        <th>Symbol</th>
+                                        <th>Weight %</th>
+                                        <th>LTP</th>
+                                        <th>Change</th>
+                                        <th>Change %</th>
+                                        <th>Volume</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="nifty50TableBody">
+                                    <tr><td colspan="8" class="loading">Click "Refresh Data" to load market data</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="nifty50Summary"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bank Nifty Tab -->
+            <div class="tab-pane fade" id="banknifty" role="tabpanel">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-responsive mb-4">
+                            <table class="table table-striped table-hover" id="bankniftyTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Company</th>
+                                        <th>Symbol</th>
+                                        <th>Weight %</th>
+                                        <th>LTP</th>
+                                        <th>Change</th>
+                                        <th>Change %</th>
+                                        <th>Volume</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bankniftyTableBody">
+                                    <tr><td colspan="8" class="loading">Click "Refresh Data" to load market data</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="bankniftySummary"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nifty Futures Tab -->
+            <div class="tab-pane fade" id="niftyfutures" role="tabpanel">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-responsive mb-4">
+                            <table class="table table-striped table-hover" id="niftyfuturesTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Company</th>
+                                        <th>Symbol</th>
+                                        <th>Weight %</th>
+                                        <th>LTP</th>
+                                        <th>Open</th>
+                                        <th>High</th>
+                                        <th>Low</th>
+                                        <th>Close</th>
+                                        <th>Change</th>
+                                        <th>Change %</th>
+                                        <th>PCR</th>
+                                        <th>Volume</th>
+                                        <th>OI</th>
+                                        <th>Impact</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="niftyfuturesTableBody">
+                                    <tr><td colspan="15" class="loading">Click "Refresh Data" to load futures data</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="niftyfuturesSummary"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bank Futures Tab -->
+            <div class="tab-pane fade" id="bankfutures" role="tabpanel">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-responsive mb-4">
+                            <table class="table table-striped table-hover" id="bankfuturesTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Company</th>
+                                        <th>Symbol</th>
+                                        <th>Weight %</th>
+                                        <th>LTP</th>
+                                        <th>Open</th>
+                                        <th>High</th>
+                                        <th>Low</th>
+                                        <th>Close</th>
+                                        <th>Change</th>
+                                        <th>Change %</th>
+                                        <th>PCR</th>
+                                        <th>Volume</th>
+                                        <th>OI</th>
+                                        <th>Impact</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bankfuturesTableBody">
+                                    <tr><td colspan="15" class="loading">Click "Refresh Data" to load futures data</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="bankfuturesSummary"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5>Refreshing Market Data...</h5>
+                    <p class="text-muted">Please wait while we fetch the latest data from Angel One API</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+    
+    <script>
+        // Global variables
+        let dataLoaded = false;
+        let dataTables = {};
+
+        // Initialize DataTables
+        function initializeDataTables() {
+            const tableIds = ['nifty50Table', 'bankniftyTable', 'niftyfuturesTable', 'bankfuturesTable'];
+            
+            tableIds.forEach(tableId => {
+                if (dataTables[tableId]) {
+                    dataTables[tableId].destroy();
+                }
+                
+                dataTables[tableId] = $(`#${tableId}`).DataTable({
+                    pageLength: 25,
+                    responsive: true,
+                    order: [[0, 'asc']], // Sort by rank
+                    columnDefs: [
+                        { targets: '_all', className: 'text-center' },
+                        { targets: [3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14], className: 'text-end' } // Numeric columns
+                    ]
+                });
+            });
+        }
+
+        // Format number with commas
+        function formatNumber(num) {
+            if (num === 0 || num === null || num === undefined) return '0';
+            return new Intl.NumberFormat('en-IN').format(num);
+        }
+
+        // Format currency
+        function formatCurrency(num) {
+            if (num === 0 || num === null || num === undefined) return '₹0';
+            return '₹' + new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
+        }
+
+        // Get change class for styling
+        function getChangeClass(change) {
+            if (change > 0) return 'positive';
+            if (change < 0) return 'negative';
+            return 'neutral';
+        }
+
+        // Update meters
+        function updateMeters() {
+            fetch('/api/meters')
+                .then(response => response.json())
+                .then(data => {
+                    // Nifty Meter
+                    const niftyMeter = document.getElementById('niftyMeter');
+                    const niftyValue = niftyMeter.querySelector('.meter-value');
+                    const niftyStatus = niftyMeter.querySelector('.meter-status');
+                    
+                    niftyValue.textContent = data.nifty_meter.value;
+                    niftyStatus.innerHTML = `${data.nifty_meter.icon} NIFTY 50 FUTURES - ${data.nifty_meter.status}`;
+                    niftyMeter.className = `meter-card bg-${data.nifty_meter.color}`;
+
+                    // Bank Nifty Meter
+                    const bankMeter = document.getElementById('bankMeter');
+                    const bankValue = bankMeter.querySelector('.meter-value');
+                    const bankStatus = bankMeter.querySelector('.meter-status');
+                    
+                    bankValue.textContent = data.bank_meter.value;
+                    bankStatus.innerHTML = `${data.bank_meter.icon} BANK NIFTY FUTURES - ${data.bank_meter.status}`;
+                    bankMeter.className = `meter-card bg-${data.bank_meter.color}`;
+
+                    // Update timestamp
+                    if (data.last_update) {
+                        document.getElementById('lastUpdate').textContent = `Last Update: ${data.last_update}`;
+                    }
+                })
+                .catch(error => console.error('Error updating meters:', error));
+        }
+
+        // Load data for specific tab
+        function loadTabData(dataType, tableId, summaryId) {
+            fetch(`/api/data/${dataType}`)
+                .then(response => response.json())
+                .then(result => {
+                    const data = result.data;
+                    const pcrData = result.pcr_data || {};
+                    
+                    // Clear existing table
+                    const tableBody = document.getElementById(tableId + 'Body');
+                    tableBody.innerHTML = '';
+
+                    if (data && data.length > 0) {
+                        // Sort by weight (descending)
+                        data.sort((a, b) => (b.weight || 0) - (a.weight || 0));
+
+                        // Populate table
+                        data.forEach((stock, index) => {
+                            const row = document.createElement('tr');
+                            
+                            if (dataType.includes('futures')) {
+                                // Futures table with all columns
+                                const impact = (stock.percentChange * stock.weight) / 100;
+                                const pcrValue = pcrData[stock.tradingSymbol] || 0;
+                                
+                                row.innerHTML = `
+                                    <td>${index + 1}</td>
+                                    <td class="text-start">${stock.company}</td>
+                                    <td>${stock.name}</td>
+                                    <td>${stock.weight.toFixed(2)}%</td>
+                                    <td>${formatCurrency(stock.ltp)}</td>
+                                    <td>${formatCurrency(stock.open)}</td>
+                                    <td>${formatCurrency(stock.high)}</td>
+                                    <td>${formatCurrency(stock.low)}</td>
+                                    <td>${formatCurrency(stock.close)}</td>
+                                    <td class="${getChangeClass(stock.netChange)}">${stock.netChange.toFixed(2)}</td>
+                                    <td class="${getChangeClass(stock.percentChange)}">${stock.percentChange.toFixed(2)}%</td>
+                                    <td>${pcrValue > 0 ? pcrValue.toFixed(2) : 'N/A'}</td>
+                                    <td>${formatNumber(stock.tradeVolume)}</td>
+                                    <td>${formatNumber(stock.opnInterest)}</td>
+                                    <td class="${getChangeClass(impact)}"><span class="badge badge-impact bg-secondary">${impact.toFixed(3)}</span></td>
+                                `;
+                            } else {
+                                // Regular equity table
+                                row.innerHTML = `
+                                    <td>${index + 1}</td>
+                                    <td class="text-start">${stock.company}</td>
+                                    <td>${stock.name}</td>
+                                    <td>${stock.weight.toFixed(2)}%</td>
+                                    <td>${formatCurrency(stock.ltp)}</td>
+                                    <td class="${getChangeClass(stock.netChange)}">${stock.netChange.toFixed(2)}</td>
+                                    <td class="${getChangeClass(stock.percentChange)}">${stock.percentChange.toFixed(2)}%</td>
+                                    <td>${formatNumber(stock.tradeVolume)}</td>
+                                `;
+                            }
+                            
+                            tableBody.appendChild(row);
+                        });
+
+                        // Regenerate DataTable
+                        if (dataTables[tableId]) {
+                            dataTables[tableId].destroy();
+                        }
+                        dataTables[tableId] = $(`#${tableId}`).DataTable({
+                            pageLength: 25,
+                            responsive: true,
+                            order: [[0, 'asc']],
+                            columnDefs: [
+                                { targets: '_all', className: 'text-center' },
+                                { targets: dataType.includes('futures') ? [3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14] : [3, 4, 5, 6, 7], className: 'text-end' }
+                            ]
+                        });
+
+                        // Generate summary
+                        generateSummary(data, summaryId, dataType, result.meter, pcrData);
+                    } else {
+                        tableBody.innerHTML = '<tr><td colspan="8" class="loading">No data available</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading data:', error);
+                    const tableBody = document.getElementById(tableId + 'Body');
+                    tableBody.innerHTML = '<tr><td colspan="8" class="loading text-danger">Error loading data</td></tr>';
+                });
+        }
+
+        // Generate summary for each tab
+        function generateSummary(data, summaryId, dataType, meterData, pcrData) {
+            const summaryDiv = document.getElementById(summaryId);
+            if (!data || data.length === 0) {
+                summaryDiv.innerHTML = '<div class="summary-card">No data available for summary</div>';
+                return;
+            }
+
+            // Calculate basic metrics
+            const totalWeight = data.reduce((sum, stock) => sum + (stock.weight || 0), 0);
+            const avgLtp = data.reduce((sum, stock) => sum + (stock.ltp || 0), 0) / data.length;
+            const totalVolume = data.reduce((sum, stock) => sum + (stock.tradeVolume || 0), 0);
+            
+            // Get gainers and losers
+            const gainers = data.filter(s => s.percentChange > 0).sort((a, b) => b.percentChange - a.percentChange).slice(0, 5);
+            const losers = data.filter(s => s.percentChange < 0).sort((a, b) => a.percentChange - b.percentChange).slice(0, 5);
+            
+            // Get top performers
+            const maxLtp = Math.max(...data.map(s => s.ltp || 0));
+            const minLtp = Math.min(...data.map(s => s.ltp || 0));
+            const maxLtpStock = data.find(s => s.ltp === maxLtp);
+            const minLtpStock = data.find(s => s.ltp === minLtp);
+
+            let summaryHtml = `
+                <div class="summary-card">
+                    <h5><i class="fas fa-chart-bar text-primary"></i> Portfolio Metrics</h5>
+                    <div class="metric-row">
+                        <span class="metric-label">Total Weight Coverage:</span>
+                        <span class="metric-value">${totalWeight.toFixed(2)}%</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Average LTP:</span>
+                        <span class="metric-value">${formatCurrency(avgLtp)}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Total Volume:</span>
+                        <span class="metric-value">${formatNumber(totalVolume)}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Stocks with Gains:</span>
+                        <span class="metric-value positive">${gainers.length}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Stocks with Losses:</span>
+                        <span class="metric-value negative">${losers.length}</span>
+                    </div>
+                </div>
+            `;
+
+            // Add meter data for futures
+            if (dataType.includes('futures') && meterData) {
+                summaryHtml += `
+                    <div class="summary-card">
+                        <h5><i class="fas fa-thermometer-half text-primary"></i> Live ${dataType.includes('nifty') ? 'Nifty 50' : 'Bank Nifty'} Futures Meter</h5>
+                        <div class="metric-row">
+                            <span class="metric-label">Impact Score:</span>
+                            <span class="metric-value">${meterData.value}</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Market Sentiment:</span>
+                            <span class="metric-value">${meterData.icon} ${meterData.status}</span>
+                        </div>
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <strong>Meter Scale:</strong><br>
+                                🟢 > +0.50: Strong Bullish | 🟡 +0.20 to +0.50: Mild Bullish<br>
+                                ⚪ -0.20 to +0.20: Neutral | 🟠 -0.20 to -0.50: Mild Bearish<br>
+                                🔴 < -0.50: Strong Bearish
+                            </small>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Top performers
+            summaryHtml += `
+                <div class="summary-card">
+                    <h5><i class="fas fa-trophy text-warning"></i> Top Performers</h5>
+                    <div class="metric-row">
+                        <span class="metric-label">Highest LTP:</span>
+                        <span class="metric-value">${maxLtpStock?.company || 'N/A'} - ${formatCurrency(maxLtp)}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Lowest LTP:</span>
+                        <span class="metric-value">${minLtpStock?.company || 'N/A'} - ${formatCurrency(minLtp)}</span>
+                    </div>
+                </div>
+            `;
+
+            // Gainers
+            if (gainers.length > 0) {
+                summaryHtml += `
+                    <div class="summary-card">
+                        <h5><i class="fas fa-arrow-up text-success"></i> Top 5 Gainers</h5>
+                `;
+                gainers.forEach((stock, index) => {
+                    summaryHtml += `
+                        <div class="metric-row">
+                            <span class="metric-label">${index + 1}. ${stock.name}:</span>
+                            <span class="metric-value positive">+${stock.percentChange.toFixed(2)}%</span>
+                        </div>
+                    `;
+                });
+                summaryHtml += '</div>';
+            }
+
+            // Losers
+            if (losers.length > 0) {
+                summaryHtml += `
+                    <div class="summary-card">
+                        <h5><i class="fas fa-arrow-down text-danger"></i> Top 5 Losers</h5>
+                `;
+                losers.forEach((stock, index) => {
+                    summaryHtml += `
+                        <div class="metric-row">
+                            <span class="metric-label">${index + 1}. ${stock.name}:</span>
+                            <span class="metric-value negative">${stock.percentChange.toFixed(2)}%</span>
+                        </div>
+                    `;
+                });
+                summaryHtml += '</div>';
+            }
+
+            // Additional futures analysis
+            if (dataType.includes('futures')) {
+                const totalOI = data.reduce((sum, stock) => sum + (stock.opnInterest || 0), 0);
+                const avgOI = totalOI / data.length;
+                const avgPCR = Object.keys(pcrData).length > 0 ? 
+                    Object.values(pcrData).reduce((sum, pcr) => sum + pcr, 0) / Object.keys(pcrData).length : 0;
+
+                // Volume and OI leaders
+                const volumeLeaders = [...data].sort((a, b) => (b.tradeVolume || 0) - (a.tradeVolume || 0)).slice(0, 3);
+                const oiLeaders = [...data].sort((a, b) => (b.opnInterest || 0) - (a.opnInterest || 0)).slice(0, 3);
+
+                summaryHtml += `
+                    <div class="summary-card">
+                        <h5><i class="fas fa-chart-area text-info"></i> Futures Analysis</h5>
+                        <div class="metric-row">
+                            <span class="metric-label">Total Open Interest:</span>
+                            <span class="metric-value">${formatNumber(totalOI)}</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Average OI:</span>
+                            <span class="metric-value">${formatNumber(avgOI)}</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Average PCR:</span>
+                            <span class="metric-value">${avgPCR.toFixed(2)}</span>
+                        </div>
+                    </div>
+                `;
+
+                // Volume leaders
+                if (volumeLeaders.length > 0) {
+                    summaryHtml += `
+                        <div class="summary-card">
+                            <h5><i class="fas fa-chart-bar text-primary"></i> Top 3 by Volume</h5>
+                    `;
+                    volumeLeaders.forEach((stock, index) => {
+                        const volToOI = stock.opnInterest > 0 ? (stock.tradeVolume / stock.opnInterest * 100) : 0;
+                        summaryHtml += `
+                            <div class="metric-row">
+                                <span class="metric-label">${index + 1}. ${stock.name}:</span>
+                                <span class="metric-value">${formatNumber(stock.tradeVolume)} (Vol/OI: ${volToOI.toFixed(1)}%)</span>
+                            </div>
+                        `;
+                    });
+                    summaryHtml += '</div>';
+                }
+
+                // OI leaders
+                if (oiLeaders.length > 0) {
+                    summaryHtml += `
+                        <div class="summary-card">
+                            <h5><i class="fas fa-link text-primary"></i> Top 3 by Open Interest</h5>
+                    `;
+                    oiLeaders.forEach((stock, index) => {
+                        const oiValue = (stock.opnInterest || 0) * (stock.ltp || 0);
+                        summaryHtml += `
+                            <div class="metric-row">
+                                <span class="metric-label">${index + 1}. ${stock.name}:</span>
+                                <span class="metric-value">${formatNumber(stock.opnInterest)} (Value: ${formatCurrency(oiValue)})</span>
+                            </div>
+                        `;
+                    });
+                    summaryHtml += '</div>';
+                }
+            }
+
+            summaryDiv.innerHTML = summaryHtml;
+        }
+
+        // Refresh all data
+        function refreshData() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+            
+            refreshBtn.disabled = true;
+            loadingModal.show();
+
+            fetch('/api/refresh-data')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Update timestamp
+                        document.getElementById('lastUpdate').textContent = `Last Update: ${data.timestamp}`;
+                        
+                        // Load data for all tabs
+                        loadTabData('nifty50', 'nifty50Table', 'nifty50Summary');
+                        loadTabData('banknifty', 'bankniftyTable', 'bankniftySummary');
+                        loadTabData('nifty-futures', 'niftyfuturesTable', 'niftyfuturesSummary');
+                        loadTabData('bank-futures', 'bankfuturesTable', 'bankfuturesSummary');
+                        
+                        // Update meters
+                        setTimeout(() => {
+                            updateMeters();
+                        }, 1000);
+                        
+                        dataLoaded = true;
+                    } else {
+                        alert('Error refreshing data: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error refreshing data. Please try again.');
+                })
+                .finally(() => {
+                    refreshBtn.disabled = false;
+                    loadingModal.hide();
+                });
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDataTables();
+            
+            // Refresh button
+            document.getElementById('refreshBtn').addEventListener('click', refreshData);
+            
+            // Tab change events
+            document.querySelectorAll('[data-bs-toggle="pill"]').forEach(tab => {
+                tab.addEventListener('shown.bs.tab', function(e) {
+                    // Redraw DataTables when tab is shown
+                    setTimeout(() => {
+                        Object.values(dataTables).forEach(table => {
+                            if (table) table.columns.adjust().draw();
+                        });
+                    }, 100);
+                });
+            });
+            
+            // Auto-refresh every 5 minutes if data is loaded
+            setInterval(() => {
+                if (dataLoaded) {
+                    updateMeters();
+                }
+            }, 300000); // 5 minutes
+        });
+    </script>
+</body>
+</html>
