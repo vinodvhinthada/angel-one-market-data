@@ -175,72 +175,6 @@ def get_historical_oi_data(symbol_token):
         return 0
     except Exception as e:
         return 0
-    
-    previous_day = get_previous_trading_day()
-    from_date = previous_day.strftime('%Y-%m-%d 09:15')
-    to_date = previous_day.strftime('%Y-%m-%d 15:30')
-    
-    print(f"📅 Fetching historical OI for {previous_day.strftime('%Y-%m-%d')}")
-    
-    # Official Angel One Historical OI API endpoint
-    url = "https://apiconnect.angelone.in/rest/secure/angelbroking/historical/v1/getOIData"
-    
-    headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-UserType': 'USER',
-        'X-SourceID': 'WEB',
-        'X-ClientLocalIP': '192.168.1.1',
-        'X-ClientPublicIP': '192.168.1.1',
-        'X-MACAddress': '00:00:00:00:00:00',
-        'X-PrivateKey': API_KEY,
-        'Authorization': f'Bearer {cached_data["auth_token"]}'
-    }
-    
-    # Use ONE_DAY interval to get the final OI value for the previous trading day
-    payload = {
-        "exchange": "NFO",
-        "symboltoken": str(symbol_token),
-        "interval": "ONE_DAY",
-        "fromdate": from_date,
-        "todate": to_date
-    }
-    
-    print(f"🌐 Making historical OI API request for token {symbol_token}")
-    print(f"📦 Payload: {payload}")
-    
-    try:
-        response = requests.post(url, json=payload, headers=headers, timeout=30)
-        print(f"📡 Historical OI API response status: {response.status_code}")
-        
-        if response.status_code == 200:
-            data = response.json()
-            print(f"📊 Historical OI API response: {data}")
-            
-            if data.get('status') and data.get('data'):
-                # Official API response format: [{"time": "2024-08-19T12:24:00+05:30", "oi": 166100}]
-                oi_data = data['data']
-                if oi_data and len(oi_data) > 0:
-                    # Get the last OI value from the day
-                    last_oi_entry = oi_data[-1]
-                    previous_oi = last_oi_entry.get('oi', 0)
-                    
-                    print(f"✅ Historical OI found for {symbol_token}: {previous_oi}")
-                    
-                    # Cache the result
-                    cached_data['historical_oi_cache'][cache_key] = (today, previous_oi)
-                    return previous_oi
-                else:
-                    print(f"⚠️ No OI data in response for {symbol_token}")
-            else:
-                print(f"❌ API returned error for {symbol_token}: {data}")
-        else:
-            print(f"❌ HTTP Error {response.status_code}: {response.text}")
-            
-        return 0
-    except Exception as e:
-        print(f"💥 Error fetching historical OI for token {symbol_token}: {e}")
-        return 0
 
 # ====== CONFIGURATION ======
 # Use direct credentials for local testing
@@ -474,16 +408,13 @@ def fetch_market_data(tokens_dict, exchange="NSE"):
             
             if response.status_code == 200:
                 result = response.json()
-                print(f"API Response for {exchange}: {result}")  # Debug logging
                 
                 if result.get('status') and result.get('data'):
                     fetched_data = result['data']['fetched']
-                    print(f"Fetched data count: {len(fetched_data)}")  # Debug logging
                     
                     for item in fetched_data:
                         # Angel One API now uses 'symbolToken' instead of 'exchToken'
                         if 'symbolToken' not in item:
-                            print(f"Warning: symbolToken not found in item: {item}")
                             continue
                             
                         token_key = str(item['symbolToken'])  # Convert to string for consistent lookup
@@ -526,22 +457,20 @@ def fetch_market_data(tokens_dict, exchange="NSE"):
                             }
                             market_data.append(processed_item)
                         else:
-                            print(f"Token {token_key} not found in tokens_dict")
+                            continue
                 else:
-                    print(f"API response status: {result.get('status')}, data: {result.get('data')}")
+                    continue
             else:
-                print(f"API request failed with status code: {response.status_code}, response: {response.text}")
+                continue
             
             time.sleep(1)  # Rate limiting
         
         return market_data
     except Exception as e:
-        print(f"Error fetching market data: {e}")
         return []
 
 def fetch_pcr_data():
     """Get Put-Call Ratio data for all instruments"""
-    print("📊 Fetching PCR (Put-Call Ratio) data...")
     
     if not cached_data['auth_token']:
         if not authenticate():
@@ -566,7 +495,6 @@ def fetch_pcr_data():
             data = response.json()
             if data.get('status'):
                 pcr_data = data.get('data', [])
-                print(f"✅ Successfully fetched PCR data for {len(pcr_data)} instruments")
                 
                 # Create a mapping of trading symbol to PCR value
                 pcr_mapping = {}
@@ -682,21 +610,11 @@ def refresh_data():
     """Refresh all market data"""
     try:
         # Fetch all data
-        print("Fetching Nifty 50 data...")
         cached_data['nifty_50'] = fetch_market_data(NIFTY_50_STOCKS, "NSE")
-        
-        print("Fetching Bank Nifty data...")
         cached_data['bank_nifty'] = fetch_market_data(BANK_NIFTY_STOCKS, "NSE")
-        
-        print("Fetching PCR data...")
         cached_data['pcr_data'] = fetch_pcr_data()
-        
-        print("Fetching Nifty 50 Futures data...")
         cached_data['nifty_futures'] = fetch_market_data(NIFTY_50_FUTURES, "NFO")
-        
-        print("Fetching Bank Nifty Futures data...")
         cached_data['bank_futures'] = fetch_market_data(BANK_NIFTY_FUTURES, "NFO")
-        
         cached_data['last_update'] = get_ist_time()
         
         return jsonify({
