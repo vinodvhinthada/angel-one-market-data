@@ -370,17 +370,52 @@ def calculate_meter_value(market_data):
     return total_impact
 
 def get_meter_status(meter_value):
-    """Get meter status and color based on value"""
+    """Get meter status, color, and trading action based on value"""
     if meter_value > 0.50:
-        return {"status": "Strong Bullish", "color": "success", "icon": "🟢"}
+        return {
+            "status": "Strong Bullish", 
+            "color": "success", 
+            "icon": "🟢",
+            "action": "Go Long (Calls / Futures Buy / BTST Calls)",
+            "trade_type": "Directional Longs",
+            "confidence": "🚀 High"
+        }
     elif 0.20 <= meter_value <= 0.50:
-        return {"status": "Mild Bullish", "color": "info", "icon": "🟡"}
+        return {
+            "status": "Mild Bullish", 
+            "color": "info", 
+            "icon": "🟡",
+            "action": "Buy on dips, avoid shorts",
+            "trade_type": "Call Scalps / Light Longs",
+            "confidence": "👍 Moderate"
+        }
     elif -0.20 <= meter_value <= 0.20:
-        return {"status": "Neutral", "color": "secondary", "icon": "⚪"}
+        return {
+            "status": "Neutral", 
+            "color": "secondary", 
+            "icon": "⚪",
+            "action": "Avoid directional trades; scalp both sides",
+            "trade_type": "Iron Fly / Straddle / Range scalps",
+            "confidence": "😐 Low"
+        }
     elif -0.50 <= meter_value <= -0.20:
-        return {"status": "Mild Bearish", "color": "warning", "icon": "🟠"}
+        return {
+            "status": "Mild Bearish", 
+            "color": "warning", 
+            "icon": "🟠",
+            "action": "Sell on rise, avoid longs",
+            "trade_type": "Put Scalps / Light Shorts",
+            "confidence": "👎 Moderate"
+        }
     else:
-        return {"status": "Strong Bearish", "color": "danger", "icon": "🔴"}
+        return {
+            "status": "Strong Bearish", 
+            "color": "danger", 
+            "icon": "🔴",
+            "action": "Go Short (Puts / Futures Sell / BTST Puts)",
+            "trade_type": "Directional Shorts",
+            "confidence": "💣 High"
+        }
 
 @app.route('/')
 def index():

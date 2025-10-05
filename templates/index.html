@@ -83,12 +83,14 @@
                 <div class="meter-card" id="niftyMeter">
                     <div class="meter-value">--</div>
                     <div class="meter-status">NIFTY 50 FUTURES METER</div>
+                    <div class="meter-action" style="font-size: 0.8em; margin-top: 5px; opacity: 0.9;"></div>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="meter-card" id="bankMeter">
                     <div class="meter-value">--</div>
                     <div class="meter-status">BANK NIFTY FUTURES METER</div>
+                    <div class="meter-action" style="font-size: 0.8em; margin-top: 5px; opacity: 0.9;"></div>
                 </div>
             </div>
         </div>
@@ -340,18 +342,22 @@
                     const niftyMeter = document.getElementById('niftyMeter');
                     const niftyValue = niftyMeter.querySelector('.meter-value');
                     const niftyStatus = niftyMeter.querySelector('.meter-status');
+                    const niftyAction = niftyMeter.querySelector('.meter-action');
                     
                     niftyValue.textContent = data.nifty_meter.value;
                     niftyStatus.innerHTML = `${data.nifty_meter.icon} NIFTY 50 FUTURES - ${data.nifty_meter.status}`;
+                    niftyAction.innerHTML = `<strong>Action:</strong> ${data.nifty_meter.action}<br><strong>Trade Type:</strong> ${data.nifty_meter.trade_type} (${data.nifty_meter.confidence})`;
                     niftyMeter.className = `meter-card bg-${data.nifty_meter.color}`;
 
                     // Update Bank Nifty Meter
                     const bankMeter = document.getElementById('bankMeter');
                     const bankValue = bankMeter.querySelector('.meter-value');
                     const bankStatus = bankMeter.querySelector('.meter-status');
+                    const bankAction = bankMeter.querySelector('.meter-action');
                     
                     bankValue.textContent = data.bank_meter.value;
                     bankStatus.innerHTML = `${data.bank_meter.icon} BANK NIFTY FUTURES - ${data.bank_meter.status}`;
+                    bankAction.innerHTML = `<strong>Action:</strong> ${data.bank_meter.action}<br><strong>Trade Type:</strong> ${data.bank_meter.trade_type} (${data.bank_meter.confidence})`;
                     bankMeter.className = `meter-card bg-${data.bank_meter.color}`;
 
                     // Update timestamp
