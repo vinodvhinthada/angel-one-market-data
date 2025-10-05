@@ -458,26 +458,42 @@
                         if (dataTables[tableId]) {
                             dataTables[tableId].destroy();
                         }
+                        
+                        // Different column definitions for different table types
+                        let columnDefs;
+                        if (dataType.includes('futures')) {
+                            // Futures tables have 15 columns (0-14)
+                            columnDefs = [
+                                { targets: '_all', className: 'text-center' },
+                                { targets: [3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14], className: 'text-end' }
+                            ];
+                        } else {
+                            // Regular equity tables have 8 columns (0-7)  
+                            columnDefs = [
+                                { targets: '_all', className: 'text-center' },
+                                { targets: [3, 4, 5, 6, 7], className: 'text-end' }
+                            ];
+                        }
+                        
                         dataTables[tableId] = $(`#${tableId}`).DataTable({
                             pageLength: 25,
                             responsive: true,
                             order: [[0, 'asc']],
-                            columnDefs: [
-                                { targets: '_all', className: 'text-center' },
-                                { targets: dataType.includes('futures') ? [3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14] : [3, 4, 5, 6, 7], className: 'text-end' }
-                            ]
+                            columnDefs: columnDefs
                         });
 
                         // Generate summary
                         generateSummary(data, summaryId, dataType, result.meter, pcrData);
                     } else {
-                        tableBody.innerHTML = '<tr><td colspan="8" class="loading">No data available</td></tr>';
+                        const colspan = dataType.includes('futures') ? '15' : '8';
+                        tableBody.innerHTML = `<tr><td colspan="${colspan}" class="loading">No data available</td></tr>`;
                     }
                 })
                 .catch(error => {
                     console.error('Error loading data:', error);
                     const tableBody = document.getElementById(tableId + 'Body');
-                    tableBody.innerHTML = '<tr><td colspan="8" class="loading text-danger">Error loading data</td></tr>';
+                    const colspan = dataType.includes('futures') ? '15' : '8';
+                    tableBody.innerHTML = `<tr><td colspan="${colspan}" class="loading text-danger">Error loading data</td></tr>`;
                 });
         }
 
@@ -730,6 +746,20 @@
                             if (table) table.columns.adjust().draw();
                         });
                     }, 100);
+                    
+                    // Load data if not already loaded
+                    const target = e.target.getAttribute('data-bs-target');
+                    if (dataLoaded) {
+                        if (target === '#nifty50') {
+                            loadTabData('nifty50', 'nifty50Table', 'nifty50Summary');
+                        } else if (target === '#banknifty') {
+                            loadTabData('banknifty', 'bankniftyTable', 'bankniftySummary');
+                        } else if (target === '#niftyfutures') {
+                            loadTabData('nifty-futures', 'niftyfuturesTable', 'niftyfuturesSummary');
+                        } else if (target === '#bankfutures') {
+                            loadTabData('bank-futures', 'bankfuturesTable', 'bankfuturesSummary');
+                        }
+                    }
                 });
             });
             
