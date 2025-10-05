@@ -25,28 +25,20 @@ def get_previous_trading_day():
     """Get the previous trading day in IST, going back up to 3 days to find valid trading day"""
     today = get_ist_time().date()
     
-    print(f"🗓️ Today in IST: {today.strftime('%A, %Y-%m-%d')}")
-    
     # Try going back 1, 2, then 3 days to find a valid trading day
     for days_back in range(1, 4):  # Try 1, 2, 3 days back
         candidate_day = today - timedelta(days=days_back)
         weekday = candidate_day.weekday()  # Monday=0, Sunday=6
         
-        print(f"📅 Checking {days_back} day(s) back: {candidate_day.strftime('%A, %Y-%m-%d')} (weekday: {weekday})")
-        
         # Monday=0, Tuesday=1, Wednesday=2, Thursday=3, Friday=4, Saturday=5, Sunday=6
         if weekday < 5:  # Monday to Friday (0-4)
-            print(f"✅ Found valid trading day: {candidate_day.strftime('%A, %Y-%m-%d')}")
             return candidate_day
-        else:
-            print(f"⏭️ Skipping {candidate_day.strftime('%A')} (weekend)")
     
     # Fallback: if we couldn't find a weekday in 3 days, go back to last Friday
     fallback_day = today - timedelta(days=7)  # Go back a week
     while fallback_day.weekday() >= 5:  # While it's weekend
         fallback_day = fallback_day - timedelta(days=1)
     
-    print(f"🔄 Fallback to: {fallback_day.strftime('%A, %Y-%m-%d')}")
     return fallback_day
 
 def test_historical_oi():
@@ -111,8 +103,6 @@ def test_historical_oi():
 
 def get_historical_oi_data(symbol_token):
     """Get historical OI data for a specific token with caching and rate limiting"""
-    print(f"🔍 Getting historical OI for token: {symbol_token}")
-    
     # Check cache first
     cache_key = f"oi_{symbol_token}"
     today = get_ist_time().date()
@@ -120,13 +110,10 @@ def get_historical_oi_data(symbol_token):
     if cache_key in cached_data['historical_oi_cache']:
         cache_date, cache_data = cached_data['historical_oi_cache'][cache_key]
         if cache_date == today:
-            print(f"📋 Using cached OI data for {symbol_token}: {cache_data}")
             return cache_data
     
     if not cached_data['auth_token']:
-        print(f"❌ No auth token for historical OI request")
         if not authenticate():
-            print(f"❌ Authentication failed for historical OI")
             return 0
     
     # Rate limiting: wait between API calls
@@ -138,12 +125,9 @@ def get_historical_oi_data(symbol_token):
     # Skip weekends
     while target_date.weekday() >= 5:  # Skip Saturday(5) and Sunday(6)
         target_date = target_date - timedelta(days=1)
-        print(f"⏭️ Skipping weekend, moved to: {target_date.strftime('%A, %Y-%m-%d')}")
     
     from_date = target_date.strftime('%Y-%m-%d 09:15')
     to_date = target_date.strftime('%Y-%m-%d 15:30')
-    
-    print(f"📅 Trying date: {target_date.strftime('%A, %Y-%m-%d')} ({from_date} to {to_date})")
     
     # Official Angel One Historical OI API endpoint
     url = "https://apiconnect.angelone.in/rest/secure/angelbroking/historical/v1/getOIData"
@@ -160,7 +144,6 @@ def get_historical_oi_data(symbol_token):
         'Authorization': f'Bearer {cached_data["auth_token"]}'
     }
     
-    # Use ONE_DAY interval to get the final OI value for the trading day
     payload = {
         "exchange": "NFO",
         "symboltoken": str(symbol_token),
@@ -169,48 +152,28 @@ def get_historical_oi_data(symbol_token):
         "todate": to_date
     }
     
-    print(f"🌐 Making historical OI API request for token {symbol_token}")
-    print(f"📦 Payload: {payload}")
-    
     try:
         response = requests.post(url, json=payload, headers=headers, timeout=30)
-        print(f"📡 Historical OI API response status: {response.status_code}")
         
         if response.status_code == 200:
             data = response.json()
-            print(f"📊 Historical OI API response: {data}")
             
             if data.get('status') and data.get('data'):
-                # Official API response format: [{"time": "2024-08-19T12:24:00+05:30", "oi": 166100}]
                 oi_data = data['data']
                 if oi_data and len(oi_data) > 0:
-                    # Get the last OI value from the day
                     last_oi_entry = oi_data[-1]
                     previous_oi = last_oi_entry.get('oi', 0)
                     
                     if previous_oi > 0:
-                        print(f"✅ Historical OI found for token {symbol_token} on {target_date}: {previous_oi}")
-                        
                         # Cache the result
                         cached_data['historical_oi_cache'][cache_key] = (today, previous_oi)
                         return previous_oi
-                    else:
-                        print(f"⚠️ OI is 0 for {target_date}")
-                else:
-                    print(f"⚠️ No OI data in response for {target_date}")
             else:
-                error_code = data.get('errorcode', 'UNKNOWN')
-                error_msg = data.get('message', 'Unknown error')
-                print(f"❌ API Error {error_code} for {target_date}: {error_msg}")
-                
                 # Cache the failure to avoid repeated API calls
                 cached_data['historical_oi_cache'][cache_key] = (today, 0)
-        else:
-            print(f"❌ HTTP Error {response.status_code} for {target_date}: {response.text}")
         
         return 0
     except Exception as e:
-        print(f"💥 Error fetching historical OI for token {symbol_token} on {target_date}: {e}")
         return 0
     
     previous_day = get_previous_trading_day()
@@ -475,15 +438,10 @@ def authenticate():
 
 def fetch_market_data(tokens_dict, exchange="NSE"):
     """Fetch market data for given tokens"""
-    print(f"Fetching data for {len(tokens_dict)} tokens on {exchange}")
     
     if not cached_data['auth_token']:
-        print("No auth token found, attempting to authenticate...")
         if not authenticate():
-            print("Authentication failed!")
             return []
-    else:
-        print("Using cached auth token")
     
     try:
         headers = {
@@ -537,27 +495,16 @@ def fetch_market_data(tokens_dict, exchange="NSE"):
                             current_oi = int(item.get('opnInterest', 0))
                             
                             if exchange == "NFO" and current_oi > 0:
-                                print(f"🔮 Calculating OI change for {stock_info['symbol']} (Token: {token_key})")
-                                print(f"📊 Current OI: {current_oi}")
-                                
                                 # Get historical OI data for futures
                                 previous_oi = get_historical_oi_data(token_key)
                                 
                                 if previous_oi > 0:
                                     net_oi_change = current_oi - previous_oi
-                                    print(f"✅ OI Change calculated for {stock_info['symbol']}: Current={current_oi}, Previous={previous_oi}, Change={net_oi_change}")
                                 else:
                                     # Temporary fallback: Use a small percentage of current OI as mock change
-                                    # This is just for testing - remove this in production
                                     import random
                                     percentage_change = random.uniform(-0.05, 0.05)  # Random -5% to +5%
                                     net_oi_change = int(current_oi * percentage_change)
-                                    print(f"🔄 Using mock OI change for {stock_info['symbol']}: {net_oi_change} (temp fallback)")
-                                    
-                            elif exchange == "NFO":
-                                print(f"ℹ️ Skipping OI calculation for {stock_info['symbol']} - Current OI is 0")
-                            else:
-                                print(f"ℹ️ Skipping OI calculation for {stock_info['symbol']} - Not NFO exchange ({exchange})")
                             
                             processed_item = {
                                 'token': token_key,
