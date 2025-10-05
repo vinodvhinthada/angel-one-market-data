@@ -211,9 +211,15 @@ def authenticate():
 
 def fetch_market_data(tokens_dict, exchange="NSE"):
     """Fetch market data for given tokens"""
+    print(f"Fetching data for {len(tokens_dict)} tokens on {exchange}")
+    
     if not cached_data['auth_token']:
+        print("No auth token found, attempting to authenticate...")
         if not authenticate():
+            print("Authentication failed!")
             return []
+    else:
+        print("Using cached auth token")
     
     try:
         headers = {
@@ -246,14 +252,25 @@ def fetch_market_data(tokens_dict, exchange="NSE"):
             
             if response.status_code == 200:
                 result = response.json()
+                print(f"API Response for {exchange}: {result}")  # Debug logging
+                
                 if result.get('status') and result.get('data'):
                     fetched_data = result['data']['fetched']
+                    print(f"Fetched data count: {len(fetched_data)}")  # Debug logging
                     
                     for item in fetched_data:
-                        if item['exchToken'] in tokens_dict:
-                            stock_info = tokens_dict[item['exchToken']]
+                        print(f"Processing item: {item}")  # Debug logging
+                        
+                        # Check if exchToken exists in the response
+                        if 'exchToken' not in item:
+                            print(f"Warning: exchToken not found in item: {item}")
+                            continue
+                            
+                        token_key = str(item['exchToken'])  # Convert to string for consistent lookup
+                        if token_key in tokens_dict:
+                            stock_info = tokens_dict[token_key]
                             processed_item = {
-                                'token': item['exchToken'],
+                                'token': token_key,
                                 'symbol': stock_info['symbol'],
                                 'name': stock_info['name'],
                                 'company': stock_info['company'],
@@ -270,6 +287,12 @@ def fetch_market_data(tokens_dict, exchange="NSE"):
                                 'tradingSymbol': item.get('tradingSymbol', stock_info['symbol'])
                             }
                             market_data.append(processed_item)
+                        else:
+                            print(f"Token {token_key} not found in tokens_dict")
+                else:
+                    print(f"API response status: {result.get('status')}, data: {result.get('data')}")
+            else:
+                print(f"API request failed with status code: {response.status_code}, response: {response.text}")
             
             time.sleep(1)  # Rate limiting
         
@@ -406,6 +429,47 @@ def get_data(data_type):
             'pcr_data': cached_data.get('pcr_data', {}),
             'last_update': cached_data['last_update'].strftime('%Y-%m-%d %H:%M:%S') if cached_data['last_update'] else None
         })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/debug')
+def debug_api():
+    """Debug endpoint to test API connectivity"""
+    try:
+        # Test authentication
+        auth_success = authenticate()
+        if not auth_success:
+            return jsonify({'error': 'Authentication failed'}), 500
+        
+        # Test a simple API call with just one token
+        test_token = "1594"  # HDFC Bank token
+        headers = {
+            'Authorization': f'Bearer {cached_data["auth_token"]}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-UserType': 'USER',
+            'X-SourceID': 'WEB',
+            'X-ClientLocalIP': '192.168.1.1',
+            'X-ClientPublicIP': '192.168.1.1',
+            'X-MACAddress': '00:00:00:00:00:00',
+            'X-PrivateKey': API_KEY
+        }
+        
+        request_data = {
+            "mode": "FULL",
+            "exchangeTokens": {
+                "NSE": [test_token]
+            }
+        }
+        
+        response = requests.post(MARKET_DATA_URL, json=request_data, headers=headers, timeout=30)
+        
+        return jsonify({
+            'status_code': response.status_code,
+            'response': response.json() if response.status_code == 200 else response.text,
+            'auth_token_present': bool(cached_data['auth_token'])
+        })
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
