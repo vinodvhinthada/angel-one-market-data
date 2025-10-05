@@ -3,127 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Market Data Dashboard</title>
+    <title>Angel One Market Data - Live Dashboard</title>
+    
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- DataTables CSS -->
     <link href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
     <style>
         .meter-card {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            border-radius: 15px;
             padding: 20px;
-            margin: 10px 0;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
         }
         .meter-value {
             font-size: 2.5rem;
             font-weight: bold;
-            text-align: center;
+            margin-bottom: 10px;
         }
         .meter-status {
-            font-size: 1.2rem;
-            text-align: center;
-            margin-top: 10px;
+            font-size: 0.9rem;
+            opacity: 0.9;
         }
-        .refresh-btn {
-            background: linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%);
-            border: none;
-            border-radius: 25px;
-            padding: 12px 30px;
-            color: white;
-            font-weight: bold;
-            transition: all 0.3s ease;
-        }
-        .refresh-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-        }
-        .summary-card {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 10px 0;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            border-left: 5px solid #007bff;
-        }
-        .nav-pills .nav-link.active {
-            background: linear-gradient(45deg, #007bff, #0056b3);
-        }
-        .table-responsive {
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
+        .bg-success { background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%) !important; }
+        .bg-warning { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important; }
+        .bg-danger { background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%) !important; }
         .positive { color: #28a745; font-weight: bold; }
         .negative { color: #dc3545; font-weight: bold; }
         .neutral { color: #6c757d; }
-        .loading {
-            text-align: center;
-            padding: 50px;
-            font-size: 1.2rem;
-            color: #666;
-        }
-        .timestamp {
-            font-size: 0.9rem;
-            color: #666;
-            font-style: italic;
-        }
-        .badge-impact {
-            font-size: 0.85rem;
-            padding: 4px 8px;
-        }
-        .position-analysis {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-        .position-card {
+        .loading { text-align: center; color: #6c757d; font-style: italic; }
+        .nav-pills .nav-link.active { background-color: #0d6efd; }
+        .summary-card {
             background: #f8f9fa;
-            border-radius: 8px;
+            border-left: 4px solid #0d6efd;
             padding: 15px;
-            border-left: 4px solid;
+            margin-bottom: 15px;
+            border-radius: 5px;
         }
-        .position-bullish { border-left-color: #28a745; }
-        .position-bearish { border-left-color: #dc3545; }
         .metric-row {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin: 8px 0;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
+            margin-bottom: 8px;
         }
-        .metric-row:last-child {
-            border-bottom: none;
-        }
-        .metric-label {
-            font-weight: 600;
-            color: #495057;
-        }
-        .metric-value {
-            font-weight: bold;
-        }
+        .metric-label { font-weight: 500; }
+        .metric-value { font-weight: bold; }
+        .badge-impact { font-size: 0.75rem; }
     </style>
 </head>
-<body class="bg-light">
-    <div class="container-fluid">
+<body>
+    <div class="container-fluid py-4">
         <!-- Header -->
-        <div class="row bg-white shadow-sm mb-4">
+        <div class="row mb-4">
             <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center py-3">
-                    <h1 class="h3 mb-0">
-                        <i class="fas fa-chart-line text-primary"></i>
-                        Live Market Data Dashboard
-                    </h1>
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="timestamp" id="lastUpdate">Last Update: Never</span>
-                        <button class="btn refresh-btn" id="refreshBtn">
-                            <i class="fas fa-sync-alt me-2"></i>
-                            Refresh Data
-                        </button>
-                    </div>
+                <h1 class="text-center mb-2">
+                    <i class="fas fa-chart-line text-primary"></i>
+                    Angel One Live Market Data Dashboard
+                </h1>
+                <p class="text-center text-muted mb-3">Real-time Nifty 50, Bank Nifty & Futures Market Analysis</p>
+                
+                <!-- Controls -->
+                <div class="d-flex justify-content-center align-items-center gap-3 mb-3">
+                    <button id="refreshBtn" class="btn btn-primary btn-lg">
+                        <i class="fas fa-sync-alt"></i> Refresh Data
+                    </button>
+                    <span id="lastUpdate" class="text-muted">Last Update: Not loaded</span>
                 </div>
             </div>
         </div>
@@ -324,40 +273,58 @@
         let dataLoaded = false;
         let dataTables = {};
 
-        // Initialize DataTables
+        // FIXED: Don't initialize DataTables until AFTER data is loaded
         function initializeDataTables() {
-            const tableIds = ['nifty50Table', 'bankniftyTable', 'niftyfuturesTable', 'bankfuturesTable'];
+            console.log('Skipping initial DataTables initialization - will initialize after data load');
+        }
+
+        // FIXED: Initialize DataTable ONLY after data is populated
+        function createDataTable(tableId, isFullTable = false) {
+            console.log(`Creating DataTable for ${tableId}, isFullTable: ${isFullTable}`);
             
-            tableIds.forEach(tableId => {
-                if (dataTables[tableId]) {
-                    dataTables[tableId].destroy();
-                }
+            // Destroy existing DataTable
+            if (dataTables[tableId]) {
+                dataTables[tableId].destroy();
+                dataTables[tableId] = null;
+            }
+            
+            // Create new DataTable with correct column definitions
+            try {
+                const columnDefs = isFullTable ? [
+                    { targets: '_all', className: 'text-center' },
+                    { targets: [3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14], className: 'text-end' }
+                ] : [
+                    { targets: '_all', className: 'text-center' },
+                    { targets: [3, 4, 5, 6, 7], className: 'text-end' }
+                ];
                 
                 dataTables[tableId] = $(`#${tableId}`).DataTable({
                     pageLength: 25,
                     responsive: true,
-                    order: [[0, 'asc']], // Sort by rank
-                    columnDefs: [
-                        { targets: '_all', className: 'text-center' },
-                        { targets: [3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14], className: 'text-end' } // Numeric columns
-                    ]
+                    order: [[0, 'asc']],
+                    columnDefs: columnDefs,
+                    destroy: true
                 });
-            });
+                
+                console.log(`Successfully created DataTable for ${tableId}`);
+                return true;
+            } catch (error) {
+                console.error(`Error creating DataTable for ${tableId}:`, error);
+                return false;
+            }
         }
 
-        // Format number with commas
+        // Format functions
         function formatNumber(num) {
             if (num === 0 || num === null || num === undefined) return '0';
             return new Intl.NumberFormat('en-IN').format(num);
         }
 
-        // Format currency
         function formatCurrency(num) {
             if (num === 0 || num === null || num === undefined) return '₹0';
             return '₹' + new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
         }
 
-        // Get change class for styling
         function getChangeClass(change) {
             if (change > 0) return 'positive';
             if (change < 0) return 'negative';
@@ -369,7 +336,7 @@
             fetch('/api/meters')
                 .then(response => response.json())
                 .then(data => {
-                    // Nifty Meter
+                    // Update Nifty Meter
                     const niftyMeter = document.getElementById('niftyMeter');
                     const niftyValue = niftyMeter.querySelector('.meter-value');
                     const niftyStatus = niftyMeter.querySelector('.meter-status');
@@ -378,7 +345,7 @@
                     niftyStatus.innerHTML = `${data.nifty_meter.icon} NIFTY 50 FUTURES - ${data.nifty_meter.status}`;
                     niftyMeter.className = `meter-card bg-${data.nifty_meter.color}`;
 
-                    // Bank Nifty Meter
+                    // Update Bank Nifty Meter
                     const bankMeter = document.getElementById('bankMeter');
                     const bankValue = bankMeter.querySelector('.meter-value');
                     const bankStatus = bankMeter.querySelector('.meter-status');
@@ -395,28 +362,30 @@
                 .catch(error => console.error('Error updating meters:', error));
         }
 
-        // Load data for specific tab
+        // FIXED: Load data and create DataTable in correct order
         function loadTabData(dataType, tableId, summaryId) {
+            console.log(`Loading ${dataType} into ${tableId}`);
+            
             fetch(`/api/data/${dataType}`)
                 .then(response => response.json())
                 .then(result => {
                     const data = result.data;
                     const pcrData = result.pcr_data || {};
                     
-                    // Clear existing table
+                    // Clear table
                     const tableBody = document.getElementById(tableId + 'Body');
                     tableBody.innerHTML = '';
 
                     if (data && data.length > 0) {
-                        // Sort by weight (descending)
+                        // Sort data
                         data.sort((a, b) => (b.weight || 0) - (a.weight || 0));
 
-                        // Populate table
+                        // Populate table rows
                         data.forEach((stock, index) => {
                             const row = document.createElement('tr');
                             
                             if (dataType.includes('futures')) {
-                                // Futures table with all columns
+                                // 15-column futures table
                                 const impact = (stock.percentChange * stock.weight) / 100;
                                 const pcrValue = pcrData[stock.tradingSymbol] || 0;
                                 
@@ -438,7 +407,7 @@
                                     <td class="${getChangeClass(impact)}"><span class="badge badge-impact bg-secondary">${impact.toFixed(3)}</span></td>
                                 `;
                             } else {
-                                // Regular equity table
+                                // 8-column equity table
                                 row.innerHTML = `
                                     <td>${index + 1}</td>
                                     <td class="text-start">${stock.company}</td>
@@ -454,50 +423,27 @@
                             tableBody.appendChild(row);
                         });
 
-                        // Regenerate DataTable
-                        if (dataTables[tableId]) {
-                            dataTables[tableId].destroy();
-                        }
+                        // FIXED: NOW create DataTable after data is populated
+                        createDataTable(tableId, dataType.includes('futures'));
                         
-                        // Different column definitions for different table types
-                        let columnDefs;
-                        if (dataType.includes('futures')) {
-                            // Futures tables have 15 columns (0-14)
-                            columnDefs = [
-                                { targets: '_all', className: 'text-center' },
-                                { targets: [3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14], className: 'text-end' }
-                            ];
-                        } else {
-                            // Regular equity tables have 8 columns (0-7)  
-                            columnDefs = [
-                                { targets: '_all', className: 'text-center' },
-                                { targets: [3, 4, 5, 6, 7], className: 'text-end' }
-                            ];
-                        }
-                        
-                        dataTables[tableId] = $(`#${tableId}`).DataTable({
-                            pageLength: 25,
-                            responsive: true,
-                            order: [[0, 'asc']],
-                            columnDefs: columnDefs
-                        });
-
                         // Generate summary
                         generateSummary(data, summaryId, dataType, result.meter, pcrData);
+                        
+                        console.log(`Successfully loaded ${data.length} items into ${tableId}`);
                     } else {
                         const colspan = dataType.includes('futures') ? '15' : '8';
                         tableBody.innerHTML = `<tr><td colspan="${colspan}" class="loading">No data available</td></tr>`;
                     }
                 })
                 .catch(error => {
-                    console.error('Error loading data:', error);
+                    console.error(`Error loading ${dataType}:`, error);
                     const tableBody = document.getElementById(tableId + 'Body');
                     const colspan = dataType.includes('futures') ? '15' : '8';
                     tableBody.innerHTML = `<tr><td colspan="${colspan}" class="loading text-danger">Error loading data</td></tr>`;
                 });
         }
 
-        // Generate summary for each tab
+        // Generate summary
         function generateSummary(data, summaryId, dataType, meterData, pcrData) {
             const summaryDiv = document.getElementById(summaryId);
             if (!data || data.length === 0) {
@@ -505,26 +451,18 @@
                 return;
             }
 
-            // Calculate basic metrics
+            let summaryHtml = '';
+            
+            // Basic metrics
             const totalWeight = data.reduce((sum, stock) => sum + (stock.weight || 0), 0);
             const avgLtp = data.reduce((sum, stock) => sum + (stock.ltp || 0), 0) / data.length;
             const totalVolume = data.reduce((sum, stock) => sum + (stock.tradeVolume || 0), 0);
             
-            // Get gainers and losers
-            const gainers = data.filter(s => s.percentChange > 0).sort((a, b) => b.percentChange - a.percentChange).slice(0, 5);
-            const losers = data.filter(s => s.percentChange < 0).sort((a, b) => a.percentChange - b.percentChange).slice(0, 5);
-            
-            // Get top performers
-            const maxLtp = Math.max(...data.map(s => s.ltp || 0));
-            const minLtp = Math.min(...data.map(s => s.ltp || 0));
-            const maxLtpStock = data.find(s => s.ltp === maxLtp);
-            const minLtpStock = data.find(s => s.ltp === minLtp);
-
-            let summaryHtml = `
+            summaryHtml += `
                 <div class="summary-card">
-                    <h5><i class="fas fa-chart-bar text-primary"></i> Portfolio Metrics</h5>
+                    <h5><i class="fas fa-chart-bar text-primary"></i> Market Overview</h5>
                     <div class="metric-row">
-                        <span class="metric-label">Total Weight Coverage:</span>
+                        <span class="metric-label">Total Weight:</span>
                         <span class="metric-value">${totalWeight.toFixed(2)}%</span>
                     </div>
                     <div class="metric-row">
@@ -535,156 +473,8 @@
                         <span class="metric-label">Total Volume:</span>
                         <span class="metric-value">${formatNumber(totalVolume)}</span>
                     </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Stocks with Gains:</span>
-                        <span class="metric-value positive">${gainers.length}</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Stocks with Losses:</span>
-                        <span class="metric-value negative">${losers.length}</span>
-                    </div>
                 </div>
             `;
-
-            // Add meter data for futures
-            if (dataType.includes('futures') && meterData) {
-                summaryHtml += `
-                    <div class="summary-card">
-                        <h5><i class="fas fa-thermometer-half text-primary"></i> Live ${dataType.includes('nifty') ? 'Nifty 50' : 'Bank Nifty'} Futures Meter</h5>
-                        <div class="metric-row">
-                            <span class="metric-label">Impact Score:</span>
-                            <span class="metric-value">${meterData.value}</span>
-                        </div>
-                        <div class="metric-row">
-                            <span class="metric-label">Market Sentiment:</span>
-                            <span class="metric-value">${meterData.icon} ${meterData.status}</span>
-                        </div>
-                        <div class="mt-3">
-                            <small class="text-muted">
-                                <strong>Meter Scale:</strong><br>
-                                🟢 > +0.50: Strong Bullish | 🟡 +0.20 to +0.50: Mild Bullish<br>
-                                ⚪ -0.20 to +0.20: Neutral | 🟠 -0.20 to -0.50: Mild Bearish<br>
-                                🔴 < -0.50: Strong Bearish
-                            </small>
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Top performers
-            summaryHtml += `
-                <div class="summary-card">
-                    <h5><i class="fas fa-trophy text-warning"></i> Top Performers</h5>
-                    <div class="metric-row">
-                        <span class="metric-label">Highest LTP:</span>
-                        <span class="metric-value">${maxLtpStock?.company || 'N/A'} - ${formatCurrency(maxLtp)}</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Lowest LTP:</span>
-                        <span class="metric-value">${minLtpStock?.company || 'N/A'} - ${formatCurrency(minLtp)}</span>
-                    </div>
-                </div>
-            `;
-
-            // Gainers
-            if (gainers.length > 0) {
-                summaryHtml += `
-                    <div class="summary-card">
-                        <h5><i class="fas fa-arrow-up text-success"></i> Top 5 Gainers</h5>
-                `;
-                gainers.forEach((stock, index) => {
-                    summaryHtml += `
-                        <div class="metric-row">
-                            <span class="metric-label">${index + 1}. ${stock.name}:</span>
-                            <span class="metric-value positive">+${stock.percentChange.toFixed(2)}%</span>
-                        </div>
-                    `;
-                });
-                summaryHtml += '</div>';
-            }
-
-            // Losers
-            if (losers.length > 0) {
-                summaryHtml += `
-                    <div class="summary-card">
-                        <h5><i class="fas fa-arrow-down text-danger"></i> Top 5 Losers</h5>
-                `;
-                losers.forEach((stock, index) => {
-                    summaryHtml += `
-                        <div class="metric-row">
-                            <span class="metric-label">${index + 1}. ${stock.name}:</span>
-                            <span class="metric-value negative">${stock.percentChange.toFixed(2)}%</span>
-                        </div>
-                    `;
-                });
-                summaryHtml += '</div>';
-            }
-
-            // Additional futures analysis
-            if (dataType.includes('futures')) {
-                const totalOI = data.reduce((sum, stock) => sum + (stock.opnInterest || 0), 0);
-                const avgOI = totalOI / data.length;
-                const avgPCR = Object.keys(pcrData).length > 0 ? 
-                    Object.values(pcrData).reduce((sum, pcr) => sum + pcr, 0) / Object.keys(pcrData).length : 0;
-
-                // Volume and OI leaders
-                const volumeLeaders = [...data].sort((a, b) => (b.tradeVolume || 0) - (a.tradeVolume || 0)).slice(0, 3);
-                const oiLeaders = [...data].sort((a, b) => (b.opnInterest || 0) - (a.opnInterest || 0)).slice(0, 3);
-
-                summaryHtml += `
-                    <div class="summary-card">
-                        <h5><i class="fas fa-chart-area text-info"></i> Futures Analysis</h5>
-                        <div class="metric-row">
-                            <span class="metric-label">Total Open Interest:</span>
-                            <span class="metric-value">${formatNumber(totalOI)}</span>
-                        </div>
-                        <div class="metric-row">
-                            <span class="metric-label">Average OI:</span>
-                            <span class="metric-value">${formatNumber(avgOI)}</span>
-                        </div>
-                        <div class="metric-row">
-                            <span class="metric-label">Average PCR:</span>
-                            <span class="metric-value">${avgPCR.toFixed(2)}</span>
-                        </div>
-                    </div>
-                `;
-
-                // Volume leaders
-                if (volumeLeaders.length > 0) {
-                    summaryHtml += `
-                        <div class="summary-card">
-                            <h5><i class="fas fa-chart-bar text-primary"></i> Top 3 by Volume</h5>
-                    `;
-                    volumeLeaders.forEach((stock, index) => {
-                        const volToOI = stock.opnInterest > 0 ? (stock.tradeVolume / stock.opnInterest * 100) : 0;
-                        summaryHtml += `
-                            <div class="metric-row">
-                                <span class="metric-label">${index + 1}. ${stock.name}:</span>
-                                <span class="metric-value">${formatNumber(stock.tradeVolume)} (Vol/OI: ${volToOI.toFixed(1)}%)</span>
-                            </div>
-                        `;
-                    });
-                    summaryHtml += '</div>';
-                }
-
-                // OI leaders
-                if (oiLeaders.length > 0) {
-                    summaryHtml += `
-                        <div class="summary-card">
-                            <h5><i class="fas fa-link text-primary"></i> Top 3 by Open Interest</h5>
-                    `;
-                    oiLeaders.forEach((stock, index) => {
-                        const oiValue = (stock.opnInterest || 0) * (stock.ltp || 0);
-                        summaryHtml += `
-                            <div class="metric-row">
-                                <span class="metric-label">${index + 1}. ${stock.name}:</span>
-                                <span class="metric-value">${formatNumber(stock.opnInterest)} (Value: ${formatCurrency(oiValue)})</span>
-                            </div>
-                        `;
-                    });
-                    summaryHtml += '</div>';
-                }
-            }
 
             summaryDiv.innerHTML = summaryHtml;
         }
@@ -732,6 +522,7 @@
 
         // Event listeners
         document.addEventListener('DOMContentLoaded', function() {
+            // Don't initialize DataTables here - wait for data
             initializeDataTables();
             
             // Refresh button
@@ -740,35 +531,14 @@
             // Tab change events
             document.querySelectorAll('[data-bs-toggle="pill"]').forEach(tab => {
                 tab.addEventListener('shown.bs.tab', function(e) {
-                    // Redraw DataTables when tab is shown
+                    // Adjust DataTables when tab is shown
                     setTimeout(() => {
                         Object.values(dataTables).forEach(table => {
                             if (table) table.columns.adjust().draw();
                         });
                     }, 100);
-                    
-                    // Load data if not already loaded
-                    const target = e.target.getAttribute('data-bs-target');
-                    if (dataLoaded) {
-                        if (target === '#nifty50') {
-                            loadTabData('nifty50', 'nifty50Table', 'nifty50Summary');
-                        } else if (target === '#banknifty') {
-                            loadTabData('banknifty', 'bankniftyTable', 'bankniftySummary');
-                        } else if (target === '#niftyfutures') {
-                            loadTabData('nifty-futures', 'niftyfuturesTable', 'niftyfuturesSummary');
-                        } else if (target === '#bankfutures') {
-                            loadTabData('bank-futures', 'bankfuturesTable', 'bankfuturesSummary');
-                        }
-                    }
                 });
             });
-            
-            // Auto-refresh every 5 minutes if data is loaded
-            setInterval(() => {
-                if (dataLoaded) {
-                    updateMeters();
-                }
-            }, 300000); // 5 minutes
         });
     </script>
 </body>
