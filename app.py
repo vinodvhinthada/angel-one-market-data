@@ -7,7 +7,6 @@ from flask import Flask, render_template, jsonify, request
 import json
 import pyotp
 import time
-import pandas as pd
 from datetime import datetime
 import requests
 import os

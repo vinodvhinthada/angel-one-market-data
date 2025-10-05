@@ -48,7 +48,7 @@ TOTP_TOKEN = TZZ2VTRBUWPB33SLOSA3NXSGWA
 ### 5. Advanced Settings
 
 ```
-Python Version: 3.10.9 (specified in runtime.txt)
+Python Version: 3.11.6 (specified in runtime.txt)
 Auto-Deploy: Yes (recommended)
 Health Check Path: /
 ```
@@ -77,13 +77,13 @@ Flask==2.3.3
 gunicorn==21.2.0
 requests==2.31.0
 pyotp==2.9.0
-pandas==2.0.3
 python-dotenv==1.0.0
+Werkzeug==2.3.7
 ```
 
 ### runtime.txt
 ```
-python-3.10.9
+python-3.11.6
 ```
 
 ### Procfile

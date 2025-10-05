@@ -32,7 +32,7 @@ A comprehensive real-time market data dashboard that fetches live data from Ange
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.10.9+
+- Python 3.11.6+
 - Angel One trading account with API access
 - Valid Angel One API credentials
 
@@ -147,7 +147,7 @@ http://localhost:5000
 
 ## 🛠️ Technology Stack
 
-- **Backend:** Flask 2.3.3, Python 3.10.9
+- **Backend:** Flask 2.3.3, Python 3.11.6
 - **Frontend:** Bootstrap 5, jQuery, DataTables
 - **API:** Angel One SmartAPI
 - **Deployment:** Render, Gunicorn WSGI Server
