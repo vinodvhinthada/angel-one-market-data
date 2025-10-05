@@ -295,7 +295,7 @@ def fetch_market_data(tokens_dict, exchange="NSE"):
                                 'netChange': float(item.get('netChange', 0)),
                                 'percentChange': float(item.get('percentChange', 0)),  # Note: now 'percentChange' not 'pChange'
                                 'tradeVolume': int(item.get('tradeVolume', 0)),  # Note: now 'tradeVolume' not 'totVolume'
-                                'opnInterest': int(item.get('opnInterest', 0)) if 'opnInterest' in item else 0,
+                                'netChangeOpnInterest': float(item.get('netChangeOpnInterest', 0)) if 'netChangeOpnInterest' in item else 0,
                                 'tradingSymbol': item.get('tradingSymbol', stock_info['symbol'])
                             }
                             market_data.append(processed_item)

@@ -198,7 +198,7 @@
                                         <th>Change %</th>
                                         <th>PCR</th>
                                         <th>Volume</th>
-                                        <th>OI</th>
+                                        <th>Net OI Change</th>
                                         <th>Impact</th>
                                     </tr>
                                 </thead>
@@ -233,7 +233,7 @@
                                         <th>Change %</th>
                                         <th>PCR</th>
                                         <th>Volume</th>
-                                        <th>OI</th>
+                                        <th>Net OI Change</th>
                                         <th>Impact</th>
                                     </tr>
                                 </thead>
@@ -409,7 +409,7 @@
                                     <td class="${getChangeClass(stock.percentChange)}">${stock.percentChange.toFixed(2)}%</td>
                                     <td>${pcrValue > 0 ? pcrValue.toFixed(2) : 'N/A'}</td>
                                     <td>${formatNumber(stock.tradeVolume)}</td>
-                                    <td>${formatNumber(stock.opnInterest)}</td>
+                                    <td class="${getChangeClass(stock.netChangeOpnInterest)}">${formatNumber(stock.netChangeOpnInterest)}</td>
                                     <td class="${getChangeClass(impact)}"><span class="badge badge-impact bg-secondary">${impact.toFixed(3)}</span></td>
                                 `;
                             } else {
