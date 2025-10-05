@@ -22,26 +22,92 @@ def get_ist_time():
     return datetime.now(ist)
 
 def get_previous_trading_day():
-    """Get the previous trading day (excluding weekends)"""
+    """Get the previous trading day in IST, going back up to 3 days to find valid trading day"""
     today = get_ist_time().date()
     
-    # If today is Monday (weekday 0), previous trading day is Friday (3 days back)
-    # If today is Tuesday-Friday (weekday 1-4), previous trading day is yesterday
-    # If today is Saturday (weekday 5), previous trading day is Friday (1 day back)
-    # If today is Sunday (weekday 6), previous trading day is Friday (2 days back)
+    print(f"🗓️ Today in IST: {today.strftime('%A, %Y-%m-%d')}")
     
-    weekday = today.weekday()
-    if weekday == 0:  # Monday
-        days_back = 3
-    elif weekday == 5:  # Saturday
-        days_back = 1
-    elif weekday == 6:  # Sunday
-        days_back = 2
-    else:  # Tuesday to Friday
-        days_back = 1
+    # Try going back 1, 2, then 3 days to find a valid trading day
+    for days_back in range(1, 4):  # Try 1, 2, 3 days back
+        candidate_day = today - timedelta(days=days_back)
+        weekday = candidate_day.weekday()  # Monday=0, Sunday=6
+        
+        print(f"📅 Checking {days_back} day(s) back: {candidate_day.strftime('%A, %Y-%m-%d')} (weekday: {weekday})")
+        
+        # Monday=0, Tuesday=1, Wednesday=2, Thursday=3, Friday=4, Saturday=5, Sunday=6
+        if weekday < 5:  # Monday to Friday (0-4)
+            print(f"✅ Found valid trading day: {candidate_day.strftime('%A, %Y-%m-%d')}")
+            return candidate_day
+        else:
+            print(f"⏭️ Skipping {candidate_day.strftime('%A')} (weekend)")
     
-    previous_day = today - timedelta(days=days_back)
-    return previous_day
+    # Fallback: if we couldn't find a weekday in 3 days, go back to last Friday
+    fallback_day = today - timedelta(days=7)  # Go back a week
+    while fallback_day.weekday() >= 5:  # While it's weekend
+        fallback_day = fallback_day - timedelta(days=1)
+    
+    print(f"🔄 Fallback to: {fallback_day.strftime('%A, %Y-%m-%d')}")
+    return fallback_day
+
+def test_historical_oi():
+    """Test function to verify historical OI API"""
+    print("🧪 Testing Historical OI API...")
+    
+    # Test with a known futures token (e.g., NIFTY futures)
+    test_token = "99926000"  # NIFTY token as example
+    
+    if not cached_data['auth_token']:
+        print("🔑 Authenticating for test...")
+        if not authenticate():
+            print("❌ Authentication failed for test")
+            return {"error": "Authentication failed"}
+    
+    previous_day = get_previous_trading_day()
+    from_date = previous_day.strftime('%Y-%m-%d 09:15')
+    to_date = previous_day.strftime('%Y-%m-%d 15:30')
+    
+    print(f"📅 Test date range: {from_date} to {to_date}")
+    
+    url = "https://apiconnect.angelone.in/rest/secure/angelbroking/historical/v1/getOIData"
+    
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-UserType': 'USER',
+        'X-SourceID': 'WEB',
+        'X-ClientLocalIP': '192.168.1.1',
+        'X-ClientPublicIP': '192.168.1.1',
+        'X-MACAddress': '00:00:00:00:00:00',
+        'X-PrivateKey': API_KEY,
+        'Authorization': f'Bearer {cached_data["auth_token"]}'
+    }
+    
+    payload = {
+        "exchange": "NFO",
+        "symboltoken": test_token,
+        "interval": "ONE_DAY",
+        "fromdate": from_date,
+        "todate": to_date
+    }
+    
+    print(f"🌐 Test API Request:")
+    print(f"   URL: {url}")
+    print(f"   Payload: {payload}")
+    
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        print(f"📡 Test Response Status: {response.status_code}")
+        print(f"📊 Test Response Body: {response.text}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            return {"success": True, "data": data}
+        else:
+            return {"error": f"HTTP {response.status_code}: {response.text}"}
+            
+    except Exception as e:
+        print(f"💥 Test API Error: {e}")
+        return {"error": str(e)}
 
 def get_historical_oi_data(symbol_token):
     """Get historical OI data for a specific token with caching"""
@@ -537,6 +603,35 @@ def get_meter_status(meter_value):
             "trade_type": "Directional Shorts",
             "confidence": "💣 High"
         }
+
+@app.route('/test/dates')
+def test_dates():
+    """Test the improved date calculation"""
+    result = []
+    today = get_ist_time()
+    result.append(f"Today IST: {today.strftime('%A, %Y-%m-%d %H:%M:%S')}")
+    
+    try:
+        previous_day = get_previous_trading_day()
+        result.append(f"Previous trading day: {previous_day.strftime('%A, %Y-%m-%d')}")
+        
+        # Test multiple days back
+        for i in range(1, 4):
+            test_date = today.date() - timedelta(days=i)
+            while test_date.weekday() >= 5:
+                test_date = test_date - timedelta(days=1)
+            result.append(f"{i} trading day(s) back: {test_date.strftime('%A, %Y-%m-%d')}")
+            
+    except Exception as e:
+        result.append(f"Error: {e}")
+    
+    return "<br>".join(result)
+
+@app.route('/test/oi')
+def test_oi_endpoint():
+    """Test endpoint for historical OI API"""
+    result = test_historical_oi()
+    return jsonify(result)
 
 @app.route('/')
 def index():
