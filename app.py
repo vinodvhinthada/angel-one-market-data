@@ -13,16 +13,13 @@ import os
 from werkzeug.exceptions import RequestEntityTooLarge
 
 app = Flask(__name__)
-app.config['MAX_CO        print("Fetching Bank Nifty Futures data...")
-        cached_data['bank_futures'] = fetch_market_data(BANK_NIFTY_FUTURES, "NFO")
-        
-        cached_data['last_update'] = get_ist_time()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Data refreshed successfully',
-            'timestamp': cached_data['last_update'].strftime('%Y-%m-%d %H:%M:%S IST')
-        })TH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# IST timezone helper function
+def get_ist_time():
+    """Get current time in Indian Standard Time (IST)"""
+    ist = timezone(timedelta(hours=5, minutes=30))
+    return datetime.now(ist)
 
 # IST timezone helper function
 def get_ist_time():
@@ -410,12 +407,12 @@ def refresh_data():
         print("Fetching Bank Nifty Futures data...")
         cached_data['bank_futures'] = fetch_market_data(BANK_NIFTY_FUTURES, "NFO")
         
-        cached_data['last_update'] = datetime.now()
+        cached_data['last_update'] = get_ist_time()
         
         return jsonify({
             'status': 'success',
             'message': 'Data refreshed successfully',
-            'timestamp': cached_data['last_update'].strftime('%Y-%m-%d %H:%M:%S')
+            'timestamp': cached_data['last_update'].strftime('%Y-%m-%d %H:%M:%S IST')
         })
     except Exception as e:
         return jsonify({
