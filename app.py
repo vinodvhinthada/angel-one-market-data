@@ -302,39 +302,51 @@ def fetch_market_data(tokens_dict, exchange="NSE"):
         return []
 
 def fetch_pcr_data():
-    """Fetch PCR (Put-Call Ratio) data"""
+    """Get Put-Call Ratio data for all instruments"""
+    print("📊 Fetching PCR (Put-Call Ratio) data...")
+    
     if not cached_data['auth_token']:
         if not authenticate():
             return {}
     
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-UserType': 'USER',
+        'X-SourceID': 'WEB',
+        'X-ClientLocalIP': '192.168.1.1',
+        'X-ClientPublicIP': '192.168.1.1',
+        'X-MACAddress': '00:00:00:00:00:00',
+        'X-PrivateKey': API_KEY,
+        'Authorization': f'Bearer {cached_data["auth_token"]}'
+    }
+    
     try:
-        headers = {
-            'Authorization': f'Bearer {cached_data["auth_token"]}',
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-UserType': 'USER',
-            'X-SourceID': 'WEB',
-            'X-ClientLocalIP': '192.168.1.1',
-            'X-ClientPublicIP': '192.168.1.1',
-            'X-MACAddress': '00:00:00:00:00:00',
-            'X-PrivateKey': API_KEY
-        }
-        
-        response = requests.get(PCR_URL, headers=headers, timeout=30)
+        response = requests.get(PCR_URL, headers=headers)
         
         if response.status_code == 200:
-            result = response.json()
-            if result.get('status') and result.get('data'):
-                pcr_dict = {}
-                for item in result['data']:
-                    symbol = item.get('tradingSymbol', '')
-                    pcr_value = float(item.get('putCallRatio', 0))
-                    if pcr_value > 0:
-                        pcr_dict[symbol] = pcr_value
-                return pcr_dict
-        return {}
+            data = response.json()
+            if data.get('status'):
+                pcr_data = data.get('data', [])
+                print(f"✅ Successfully fetched PCR data for {len(pcr_data)} instruments")
+                
+                # Create a mapping of trading symbol to PCR value
+                pcr_mapping = {}
+                for item in pcr_data:
+                    trading_symbol = item.get('tradingSymbol', '')
+                    pcr_value = item.get('pcr', 0)
+                    pcr_mapping[trading_symbol] = pcr_value
+                
+                return pcr_mapping
+            else:
+                print(f"❌ PCR API Error: {data.get('message')}")
+                return {}
+        else:
+            print(f"❌ PCR HTTP Error: {response.status_code}")
+            return {}
+            
     except Exception as e:
-        print(f"Error fetching PCR data: {e}")
+        print(f"❌ Error fetching PCR data: {e}")
         return {}
 
 def calculate_meter_value(market_data):
@@ -470,6 +482,32 @@ def debug_api():
             'auth_token_present': bool(cached_data['auth_token'])
         })
         
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/debug-pcr')
+def debug_pcr():
+    try:
+        headers = {
+            'Authorization': f'Bearer {cached_data["auth_token"]}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-UserType': 'USER',
+            'X-SourceID': 'WEB',
+            'X-ClientLocalIP': '192.168.1.1',
+            'X-ClientPublicIP': '192.168.1.1',
+            'X-MACAddress': '00:00:00:00:00:00',
+            'X-PrivateKey': API_KEY
+        }
+        
+        response = requests.get(PCR_URL, headers=headers, timeout=30)
+        
+        return jsonify({
+            'status_code': response.status_code,
+            'response_text': response.text,
+            'pcr_url': PCR_URL,
+            'headers_sent': dict(headers)
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
