@@ -409,7 +409,9 @@
                                     <td class="${getChangeClass(stock.percentChange)}">${stock.percentChange.toFixed(2)}%</td>
                                     <td>${pcrValue > 0 ? pcrValue.toFixed(2) : 'N/A'}</td>
                                     <td>${formatNumber(stock.tradeVolume)}</td>
-                                    <td class="${getChangeClass(stock.netChangeOpnInterest)}">${formatNumber(stock.netChangeOpnInterest)}</td>
+                                    <td class="${getChangeClass(stock.netChangeOpnInterest)}">
+                                        ${stock.netChangeOpnInterest !== 0 ? formatNumber(stock.netChangeOpnInterest) : (stock.opnInterest ? formatNumber(stock.opnInterest) : 'N/A')}
+                                    </td>
                                     <td class="${getChangeClass(impact)}"><span class="badge badge-impact bg-secondary">${impact.toFixed(3)}</span></td>
                                 `;
                             } else {

@@ -28,12 +28,11 @@ def get_ist_time():
     return datetime.now(ist)
 
 # ====== CONFIGURATION ======
-# Use environment variables in production
-import os
-API_KEY = os.getenv('API_KEY', 'tKo2xsA5')
-USERNAME = os.getenv('USERNAME', 'C125633')
-PASSWORD = os.getenv('PASSWORD', '4111')
-TOTP_TOKEN = os.getenv('TOTP_TOKEN', "TZZ2VTRBUWPB33SLOSA3NXSGWA")
+# Use direct credentials for local testing
+API_KEY = 'tKo2xsA5'
+USERNAME = 'C125633'
+PASSWORD = '4111'
+TOTP_TOKEN = "TZZ2VTRBUWPB33SLOSA3NXSGWA"
 
 # API URLs
 BASE_URL = "https://apiconnect.angelone.in"
@@ -271,8 +270,6 @@ def fetch_market_data(tokens_dict, exchange="NSE"):
                     print(f"Fetched data count: {len(fetched_data)}")  # Debug logging
                     
                     for item in fetched_data:
-                        print(f"Processing item: {item}")  # Debug logging
-                        
                         # Angel One API now uses 'symbolToken' instead of 'exchToken'
                         if 'symbolToken' not in item:
                             print(f"Warning: symbolToken not found in item: {item}")
@@ -296,6 +293,7 @@ def fetch_market_data(tokens_dict, exchange="NSE"):
                                 'percentChange': float(item.get('percentChange', 0)),  # Note: now 'percentChange' not 'pChange'
                                 'tradeVolume': int(item.get('tradeVolume', 0)),  # Note: now 'tradeVolume' not 'totVolume'
                                 'netChangeOpnInterest': float(item.get('netChangeOpnInterest', 0)) if 'netChangeOpnInterest' in item else 0,
+                                'opnInterest': int(item.get('opnInterest', 0)) if 'opnInterest' in item else 0,  # Keep as backup
                                 'tradingSymbol': item.get('tradingSymbol', stock_info['symbol'])
                             }
                             market_data.append(processed_item)
