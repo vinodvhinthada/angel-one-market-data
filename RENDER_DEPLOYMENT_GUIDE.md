@@ -43,9 +43,47 @@ API_KEY = tKo2xsA5
 USERNAME = C125633  
 PASSWORD = 4111
 TOTP_TOKEN = TZZ2VTRBUWPB33SLOSA3NXSGWA
+GOOGLE_CREDENTIALS = {"type":"service_account","project_id":"your-project"...}
 ```
 
-### 5. Advanced Settings
+**⚠️ Important for Google Sheets:**
+1. **Enable TWO APIs** in Google Cloud Console:
+   - **Google Sheets API**: https://console.developers.google.com/apis/api/sheets.googleapis.com/overview?project=1016778665061
+   - **Google Drive API**: https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=1016778665061
+   - Both are required for the gspread library to work
+
+2. **First run will show**: `❌ Failed to retrieve historical data` - This is normal!
+   - No historical data exists yet on first deployment
+   - Data will start accumulating after first refresh
+
+3. **API Usage**: App makes ~6 API calls per refresh (Normal for batched data fetching)
+
+### 5. Keep-Alive Service (For Historical Data)
+
+Since Render free tier sleeps apps, add a keep-alive service to collect historical data:
+
+#### Option A: UptimeRobot (Free)
+1. Go to [UptimeRobot.com](https://uptimerobot.com)
+2. Add HTTP(s) monitor: `https://your-app-name.onrender.com/api/refresh-data`
+3. Set interval: 5 minutes
+4. This keeps app awake + triggers data collection
+
+#### Option B: GitHub Actions (Free)
+1. Create `.github/workflows/keep-alive.yml`:
+```yaml
+name: Keep Alive
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Every 5 minutes
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping app
+        run: curl https://your-app-name.onrender.com/api/refresh-data
+```
+
+### 6. Advanced Settings
 
 ```
 Python Version: 3.11.6 (specified in runtime.txt)
@@ -95,13 +133,17 @@ web: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
 
 Once deployed, your app will provide:
 
-### 📊 **4 Interactive Tabs**
-1. **Nifty 50 Stocks** - Real-time data for 50 stocks
-2. **Bank Nifty Stocks** - 12 banking sector stocks  
-3. **Nifty 50 Futures** - OCT 2025 futures contracts
-4. **Bank Nifty Futures** - Banking futures contracts
+### 📊 **5 Interactive Tabs**
+1. **📈 Futures Charts & Impact** - Historical ISS trends with Google Sheets
+2. **Nifty 50 Stocks** - Real-time data for 50 stocks
+3. **Bank Nifty Stocks** - 12 banking sector stocks  
+4. **Nifty 50 Futures** - OCT 2025 futures contracts
+5. **Bank Nifty Futures** - Banking futures contracts
 
 ### ⚡ **Key Features**
+- **Historical Charts** - Google Sheets powered historical data
+- **Auto-Refresh** - Every 5 minutes with keep-alive service
+- **Institutional ISS** - Professional sentiment scoring (0-1 scale)
 - **Live Data Refresh** - Click refresh for real-time updates
 - **Interactive Tables** - Sort, filter, search functionality
 - **Market Meters** - Live market summary metrics
@@ -126,9 +168,12 @@ Bank Futures API: https://your-app-name.onrender.com/api/bankfutures
 ```
 
 ### Testing Checklist:
-- [ ] Homepage loads with 4 tabs
+- [ ] Homepage loads with charts tab first
+- [ ] Historical charts show data from Google Sheets  
 - [ ] Click each tab to verify data loading
 - [ ] Test refresh functionality
+- [ ] Verify ISS institutional scoring working
+- [ ] Check keep-alive service is pinging every 5 minutes
 - [ ] Verify table sorting/filtering
 - [ ] Check mobile responsiveness
 - [ ] Confirm real-time data updates
